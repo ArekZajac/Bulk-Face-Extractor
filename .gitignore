@@ -1,3 +1,9 @@
 */__pycache__
+__pycache__
 .vscode/*
 .DS_Store
+Input/*
+Processed/*
+No Faces/*
+Output/*
+FaceStitcher.py

@@ -27,11 +27,12 @@ class BulkFaceExtractor:
     def process_image(self, image_path):
         image = cv2.imread(image_path)
         faces = self.detector.detect_faces(image)
-        return [image[y:y+h, x:x+w] for face in faces for (x, y, w, h) in [face['box']]]
+        return [(image[y:y+h, x:x+w], face['box']) for face in faces for (x, y, w, h) in [face['box']]]
+
 
     @staticmethod
-    def write_file(folder, image, base_name, face_count):
-        file_name = f"{base_name}_{face_count}.jpg"
+    def write_file(folder, image, base_name, face_count, x, y, w, h):
+        file_name = f"{base_name}_{face_count}_{x}_{y}_{w}_{h}.jpg"
         cv2.imwrite(os.path.join(folder, file_name), image)
 
     def move_file(self, folder, image_path):
@@ -55,8 +56,10 @@ class BulkFaceExtractor:
                 no_faces_detected.append(base_name)
                 self.move_file(no_faces_dir, image_path)
             else:
-                for i, face in enumerate(faces, start=1):
-                    self.write_file(output_dir, face, base_name, i)
+                for i, face_data in enumerate(faces, start=1):
+                    face, box = face_data
+                    x, y, w, h = box
+                    self.write_file(output_dir, face, base_name, i, x, y, w, h)
                 self.move_file(processed_dir, image_path)
 
         if no_faces_detected:
