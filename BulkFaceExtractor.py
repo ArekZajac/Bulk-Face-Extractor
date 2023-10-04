@@ -21,14 +21,18 @@ class BulkFaceExtractor:
             os.rename(path, os.path.join(input_dir, file_hash + extension))
 
     @staticmethod
-    def get_image_paths(folder):
-        return [os.path.join(folder, image_name) for image_name in os.listdir(folder) if image_name.lower().endswith((".jpg", ".jpeg", ".png"))]
+    def get_image_paths(input_path):
+        if os.path.isdir(input_path):
+            return [os.path.join(input_path, image_name) for image_name in os.listdir(input_path) if image_name.lower().endswith((".jpg", ".jpeg", ".png"))]
+        elif os.path.isfile(input_path) and input_path.lower().endswith((".jpg", ".jpeg", ".png")):
+            return [input_path]
+        else:
+            return []
 
     def process_image(self, image_path):
         image = cv2.imread(image_path)
         faces = self.detector.detect_faces(image)
         return [(image[y:y+h, x:x+w], face['box']) for face in faces for (x, y, w, h) in [face['box']]]
-
 
     @staticmethod
     def write_file(folder, image, base_name, face_count, x, y, w, h):
@@ -38,17 +42,20 @@ class BulkFaceExtractor:
     def move_file(self, folder, image_path):
         shutil.move(image_path, os.path.join(folder, os.path.basename(image_path)))
 
-    def process_dir(self, input_dir, output_dir, processed_dir, no_faces_dir):
-        path_list = self.get_image_paths(input_dir)
+    def process_input(self, input_path, output_dir, processed_dir, no_faces_dir):
+        path_list = self.get_image_paths(input_path)
         no_faces_detected = []
 
         if not path_list:
-            print("Input directory is empty.")
+            print("No valid images found.")
             return
 
         print(f"{len(path_list)} images to process...")
-        self.hash_files(path_list, input_dir)
-        path_list = self.get_image_paths(input_dir)
+
+        if os.path.isdir(input_path):
+            self.hash_files(path_list, input_path)
+            path_list = self.get_image_paths(input_path)
+
         for image_path in path_list:
             base_name = os.path.splitext(os.path.basename(image_path))[0]
             faces = self.process_image(image_path)
@@ -69,7 +76,7 @@ class BulkFaceExtractor:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", required=True, help="Path to input directory.")
+    parser.add_argument("-i", "--input", required=True, help="Path to input directory or image file.")
     parser.add_argument("-o", "--output", default="Output", help="Path to output directory.")
     parser.add_argument("-p", "--processed", default="Processed", help="Path to processed directory.")
     parser.add_argument("-n", "--nofaces", default="No Faces", help="Path to No Faces directory.")
@@ -82,4 +89,4 @@ if __name__ == "__main__":
     if not os.path.exists(args.nofaces):
         os.makedirs(args.nofaces)
 
-    BulkFaceExtractor().process_dir(args.input, args.output, args.processed, args.nofaces)
+    BulkFaceExtractor().process_input(args.input, args.output, args.processed, args.nofaces)
